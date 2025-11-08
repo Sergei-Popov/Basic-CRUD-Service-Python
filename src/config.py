@@ -7,12 +7,12 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
+    postgres_password: str = "1256"
     postgres_db: str = "crud_service"
     
     database_echo: bool = True
     
-    host: str = "0.0.0.0"
+    host: str = "localhost"
     port: int = 4444
 
     @property

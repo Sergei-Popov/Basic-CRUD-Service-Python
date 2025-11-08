@@ -7,14 +7,15 @@ from ..dependencies import SessionDep
 
 router = APIRouter(prefix="/users", tags=["Пользователи"])
 
-
+# USERS ROUTES
 @router.post("/", summary="Создание нового пользователя")
 async def create_user(user: UserCreateSchema, session: SessionDep):
     """Создает нового пользователя в БД"""
     new_user = UserModel(
+        id_telegram=user.id_telegram,
+        username=user.username,
         first_name=user.first_name,
         last_name=user.last_name,
-        email=user.email,
     )
     session.add(new_user)
     await session.commit()
@@ -44,7 +45,6 @@ async def get_user(user_id: int, session: SessionDep) -> UserSchema:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-
 @router.delete("/{user_id}", summary="Удаление пользователя")
 async def delete_user(user_id: int, session: SessionDep):
     """Удаляет пользователя из БД"""
@@ -57,7 +57,6 @@ async def delete_user(user_id: int, session: SessionDep):
     await session.commit()
     return {"status": "success", "message": "User deleted"}
 
-
 @router.patch("/{user_id}", summary="Обновление пользователя")
 async def update_user(user_id: int, user_update: UserUpdateSchema, session: SessionDep):
     """Обновляет данные пользователя"""
@@ -67,12 +66,60 @@ async def update_user(user_id: int, user_update: UserUpdateSchema, session: Sess
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if user_update.username is not None:
+        user.username = user_update.username
     if user_update.first_name is not None:
         user.first_name = user_update.first_name
     if user_update.last_name is not None:
         user.last_name = user_update.last_name
-    if user_update.email is not None:
-        user.email = user_update.email
+    if user_update.phone_number is not None:
+        user.phone_number = user_update.phone_number
+
+    session.add(user)
+    await session.commit()
+    return {"status": "success", "message": "User updated"}
+
+
+# TELEGRAM USERS ROUTES
+@router.get("/telegram/{id_telegram}", response_model=UserSchema, summary="Получение пользователя по Telegram ID")
+async def get_user_by_telegram_id(id_telegram: int, session: SessionDep) -> UserSchema:
+    """Возвращает пользователя по telegram ID"""
+    query = select(UserModel).where(UserModel.id_telegram == id_telegram)
+    result = await session.execute(query)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.delete("/telegram/{id_telegram}", summary="Удаление пользователя по Telegram ID")
+async def delete_user_by_telegram_id(id_telegram: int, session: SessionDep):
+    """Удаляет пользователя по Telegram ID"""
+    query = select(UserModel).where(UserModel.id_telegram == id_telegram)
+    result = await session.execute(query)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await session.delete(user)
+    await session.commit()
+    return {"status": "success", "message": "User deleted"}
+
+@router.patch("/telegram/{id_telegram}", summary="Обновление пользователя по Telegram ID")
+async def update_user_by_telegram_id(id_telegram: int, user_update: UserUpdateSchema, session: SessionDep):
+    """Обновляет данные пользователя по Telegram ID"""
+    query = select(UserModel).where(UserModel.id_telegram == id_telegram)
+    result = await session.execute(query)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user_update.username is not None and user.username != user_update.username:
+        user.username = user_update.username
+    if user_update.first_name is not None and user.first_name != user_update.first_name:
+        user.first_name = user_update.first_name
+    if user_update.last_name is not None and user.last_name != user_update.last_name:
+        user.last_name = user_update.last_name
+    if user_update.phone_number is not None and user.phone_number != user_update.phone_number:
+        user.phone_number = user_update.phone_number
 
     session.add(user)
     await session.commit()
